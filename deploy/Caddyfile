@@ -1,0 +1,9 @@
+{$CADDY_SITE} {
+    encode zstd gzip
+    request_body {
+        max_size 2MB
+    }
+    reverse_proxy web:8000 {
+        header_up X-Real-IP {remote_host}
+    }
+}

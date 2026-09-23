@@ -24,3 +24,14 @@ class AuthAttempt(models.Model):
     key = models.CharField(max_length=64, unique=True)
     count = models.PositiveIntegerField(default=0)
     window_start = models.DateTimeField()
+
+
+class SecurityEvent(models.Model):
+    actor = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True)
+    action = models.CharField(max_length=80)
+    object_id = models.CharField(max_length=64, blank=True)
+    details = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]

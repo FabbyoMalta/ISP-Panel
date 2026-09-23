@@ -1,5 +1,5 @@
 from django.http import HttpResponseForbidden, HttpResponseNotFound
-from django.urls import resolve
+from django.urls import Resolver404, resolve
 
 from .context import tenant_context
 from .models import Tenant, TenantMembership
@@ -11,7 +11,10 @@ class TenantMiddleware:
 
     def __call__(self, request):
         request.tenant = None
-        match = resolve(request.path_info)
+        try:
+            match = resolve(request.path_info)
+        except Resolver404:
+            return self.get_response(request)
         tenant_id = match.kwargs.get("tenant_id")
         if not tenant_id:
             return self.get_response(request)

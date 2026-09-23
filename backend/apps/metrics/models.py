@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
 
@@ -34,3 +35,10 @@ class MetricObservation(TenantModel):
 
     def __str__(self):
         return f"{self.definition}: {self.value}"
+
+    def clean(self):
+        super().clean()
+        if self.estimated and not self.assumptions.strip():
+            raise ValidationError({"assumptions": "Documente as premissas da estimativa."})
+        if self.pk and MetricObservation.objects.filter(pk=self.pk).exists():
+            raise ValidationError("Métricas são históricas. Registre uma nova observação.")

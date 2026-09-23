@@ -1,0 +1,6 @@
+{
+  "name": "isp-panel-assets",
+  "private": true,
+  "scripts": {"build": "tailwindcss -i src/app.css -o ../backend/static/css/app.css --minify && node build.mjs"},
+  "dependencies": {"@tailwindcss/cli": "^4.1.0", "tailwindcss": "^4.1.0", "htmx.org": "^2.0.0", "chart.js": "^4.4.0"}
+}

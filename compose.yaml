@@ -1,0 +1,77 @@
+name: isp-panel
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: isp_panel
+      POSTGRES_USER: isp_owner
+      POSTGRES_PASSWORD: ${DB_OWNER_PASSWORD:?Defina DB_OWNER_PASSWORD}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD:?Defina DB_APP_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./deploy/init-db.sh:/docker-entrypoint-initdb.d/10-runtime-role.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U isp_owner -d isp_panel"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    restart: unless-stopped
+  migrate:
+    build: .
+    image: isp-panel:local
+    command: ["python", "backend/manage.py", "migrate", "--noinput"]
+    environment:
+      DEBUG: "true"
+      SECRET_KEY: ${SECRET_KEY:?Defina SECRET_KEY}
+      DATABASE_URL: postgresql://isp_owner:${DB_OWNER_PASSWORD}@db:5432/isp_panel
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+  web:
+    image: isp-panel:local
+    build: .
+    environment:
+      DEBUG: "true"
+      SECRET_KEY: ${SECRET_KEY:?Defina SECRET_KEY}
+      DATABASE_URL: postgresql://isp_app:${DB_APP_PASSWORD}@db:5432/isp_panel
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-http://localhost:8080}
+      EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
+      EMAIL_HOST: ${EMAIL_HOST:-localhost}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+      EMAIL_USE_TLS: ${EMAIL_USE_TLS:-true}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-portal@localhost}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+  proxy:
+    image: caddy:2-alpine
+    environment:
+      CADDY_SITE: ${CADDY_SITE:-:80}
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
