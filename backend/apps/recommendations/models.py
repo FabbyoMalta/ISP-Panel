@@ -72,6 +72,9 @@ class RecommendationRisk(TenantModel):
     recommendation = models.ForeignKey(Recommendation, on_delete=models.PROTECT)
     risk = models.ForeignKey("risks.Risk", on_delete=models.PROTECT)
 
+    def __str__(self):
+        return f"{self.recommendation} → {self.risk}"
+
     class Meta(TenantModel.Meta):
         constraints = TenantModel.Meta.constraints + [
             models.UniqueConstraint(
@@ -92,3 +95,6 @@ class RoadmapPlacement(TenantModel):
     )
     order = models.PositiveIntegerField("Ordem", default=0)
     target_date = models.DateField("Previsão", null=True, blank=True)
+
+    def __str__(self):
+        return str(self.recommendation)

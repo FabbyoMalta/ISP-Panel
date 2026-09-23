@@ -20,7 +20,11 @@ from .models import (
 def publish_catalog(actor, name="Avaliação estratégica"):
     if not actor.is_administrator:
         raise PermissionDenied
-    items = list(AssessmentItemDefinition.objects.filter(active=True).select_related("category"))
+    items = list(
+        AssessmentItemDefinition.objects.filter(active=True)
+        .select_related("category")
+        .order_by("category__order", "category_id", "id")
+    )
     if not items:
         raise ValidationError("Cadastre critérios antes de publicar uma metodologia.")
     keys = {str(item.pk) for item in items}

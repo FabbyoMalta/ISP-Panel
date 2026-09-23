@@ -122,3 +122,35 @@ def test_nonexistent_transition_is_404(domain, client):
         f"/api/v1/t/{domain.a.id}/recommendations/{domain.rec_b.pk}/transition/", {"status": "done"}
     )
     assert response.status_code == 404
+
+
+def test_roadmap_form_resolves_current_tenant_choices(domain, client):
+    client.force_login(domain.admin)
+    response = client.post(
+        f"/t/{domain.a.id}/data/roadmap/new/",
+        {"recommendation": str(domain.rec_a.pk), "horizon": "now", "order": 0},
+    )
+    assert response.status_code == 302, response.content
+    with tenant_context(domain.a.pk):
+        assert domain.rec_a.placement.horizon == "now"
+
+
+def test_removing_dependency_is_audited_even_without_changed_fields(domain, client):
+    from apps.audit.models import AuditEntry
+    from apps.recommendations.models import Recommendation
+    from apps.recommendations.services import add_dependency
+
+    client.force_login(domain.admin)
+    with tenant_context(domain.a.pk):
+        other = Recommendation.objects.create(
+            tenant=domain.a, category=domain.category, title="Pré-requisito", justification="Teste"
+        )
+        edge = add_dependency(domain.admin, domain.rec_a, other)
+    response = client.post(
+        f"/t/{domain.a.pk}/recommendations/{domain.rec_a.pk}/",
+        {"action": "remove_dependency", "dependency": str(edge.pk)},
+    )
+    assert response.status_code == 302
+    with tenant_context(domain.a.pk):
+        assert not domain.rec_a.dependencies.exists()
+        assert AuditEntry.objects.filter(action="dependency_removed").exists()

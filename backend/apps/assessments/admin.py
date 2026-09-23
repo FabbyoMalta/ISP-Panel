@@ -52,8 +52,17 @@ class VersionAdmin(CatalogAdmin):
     def has_add_permission(self, request):
         return False
 
+    def has_change_permission(self, request, obj=None):
+        return False
 
-for model in [AssessmentCategory, MaturityLevel, MaturityRule]:
+
+@admin.register(MaturityRule)
+class RuleAdmin(CatalogAdmin):
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_administrator
+
+
+for model in [AssessmentCategory, MaturityLevel]:
     admin.site.register(model, CatalogAdmin)
 admin.site.site_header = "ISP Panel · Administração de catálogos"
 admin.site.site_title = "ISP Panel"

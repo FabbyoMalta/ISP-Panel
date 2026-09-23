@@ -9,7 +9,7 @@ class AuditEntry(TenantModel):
     action = models.CharField(max_length=80)
     object_type = models.CharField(max_length=100)
     object_id = models.CharField(max_length=64)
-    changes = models.JSONField(default=dict)
+    changes = models.JSONField(default=dict, blank=True)
 
     class Meta(TenantModel.Meta):
         ordering = ["-created_at"]

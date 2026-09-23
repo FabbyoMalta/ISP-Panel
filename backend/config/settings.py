@@ -81,6 +81,8 @@ DATABASES = {
         conn_max_age=0,
     )
 }
+if DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql":
+    DATABASES["default"]["TEST"] = {"CHARSET": "UTF8", "TEMPLATE": "template0"}
 if not (DEBUG or TESTING) and DATABASES["default"]["ENGINE"] != "django.db.backends.postgresql":
     raise ImproperlyConfigured("Produção exige PostgreSQL e RLS.")
 AUTH_USER_MODEL = "accounts.User"
@@ -101,7 +103,6 @@ LANGUAGE_CODE = "pt-br"
 TIME_ZONE = "America/Sao_Paulo"
 USE_I18N = True
 USE_TZ = True
-FORMS_URLFIELD_ASSUME_HTTPS = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
@@ -124,6 +125,8 @@ CSRF_COOKIE_SECURE = not (DEBUG or TESTING)
 SECURE_SSL_REDIRECT = not (DEBUG or TESTING)
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_HSTS_SECONDS = 31536000 if not (DEBUG or TESTING) else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = os.getenv("HSTS_INCLUDE_SUBDOMAINS", "false").lower() == "true"
+SECURE_HSTS_PRELOAD = os.getenv("HSTS_PRELOAD", "false").lower() == "true"
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "same-origin"
 X_FRAME_OPTIONS = "DENY"
@@ -144,4 +147,19 @@ REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "apps.portal.api.exception_handler",
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
 }
-SPECTACULAR_SETTINGS = {"TITLE": "ISP Panel API", "VERSION": "1.0.0", "SERVE_INCLUDE_SCHEMA": False}
+SPECTACULAR_SETTINGS = {
+    "TITLE": "ISP Panel API",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "ENUM_NAME_OVERRIDES": {
+        "RecommendationStatusEnum": "apps.recommendations.models.Recommendation.Status",
+        "ResourceStatusEnum": "apps.inventory.models.Resource.Status",
+        "RiskStatusEnum": [("open", "Aberto"), ("mitigated", "Mitigado"), ("accepted", "Aceito")],
+        "PriorityEnum": [
+            ("critical", "Crítica"),
+            ("high", "Alta"),
+            ("medium", "Média"),
+            ("low", "Baixa"),
+        ],
+    },
+}

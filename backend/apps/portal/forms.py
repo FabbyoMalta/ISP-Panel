@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from django.db import models
 from django.utils import timezone
 
 from apps.assessments.models import Assessment, AssessmentAnswer, AssessmentTemplateVersion
@@ -18,6 +19,8 @@ class StyledFormMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
+            if isinstance(field, forms.URLField):
+                field.assume_scheme = "https"
             if isinstance(field, forms.ModelChoiceField):
                 field.queryset = field.queryset.model.objects.all()
             if isinstance(field, forms.DateTimeField):
@@ -32,7 +35,16 @@ class StyledFormMixin:
 
 
 def model_form(model, fields):
-    meta = type("Meta", (), {"model": model, "fields": fields})
+    def formfield(field, **kwargs):
+        if isinstance(field, models.URLField):
+            kwargs["assume_scheme"] = "https"
+        return field.formfield(**kwargs)
+
+    meta = type(
+        "Meta",
+        (),
+        {"model": model, "fields": fields, "formfield_callback": staticmethod(formfield)},
+    )
     return type(f"{model.__name__}Form", (StyledFormMixin, forms.ModelForm), {"Meta": meta})
 
 

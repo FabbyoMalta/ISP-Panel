@@ -18,20 +18,20 @@
   {% if tenant %}<a class="tenant-switch" href="{% url 'home' %}"><span class="avatar">{{ tenant.name|slice:':2'|upper }}</span><span>{{ tenant.name }}<small>Infraestrutura e estratégia</small></span><span>⌄</span></a>{% endif %}
   <nav aria-label="Navegação principal">
     {% if tenant %}
-    <a href="{% url 'dashboard' tenant.id %}" {% if request.resolver_match.url_name == 'dashboard' %}aria-current="page"{% endif %}><span>◫</span> Visão geral</a>
-    <a href="{% url 'collection' tenant.id 'resources' %}"><span>▦</span> Infraestrutura</a>
-    <a href="{% url 'assessments' tenant.id %}"><span>◎</span> Avaliação técnica</a>
-    <a href="{% url 'roadmap' tenant.id %}"><span>↗</span> Roadmap</a>
-    <a href="{% url 'collection' tenant.id 'risks' %}"><span>△</span> Riscos</a>
-    <a href="{% url 'collection' tenant.id 'metrics' %}"><span>▥</span> Capacidade</a>
-    <a href="{% url 'collection' tenant.id 'events' %}"><span>◷</span> Evolução</a>
-    <a href="{% url 'collection' tenant.id 'links' %}"><span>↗</span> Ferramentas</a>
+    <a href="{% url 'dashboard' tenant.id %}" {% if request.resolver_match.url_name == 'dashboard' %}aria-current="page"{% endif %}><span aria-hidden="true">◫</span> Visão geral</a>
+    <a href="{% url 'collection' tenant.id 'resources' %}"><span aria-hidden="true">▦</span> Infraestrutura</a>
+    <a href="{% url 'assessments' tenant.id %}"><span aria-hidden="true">◎</span> Avaliação técnica</a>
+    <a href="{% url 'roadmap' tenant.id %}"><span aria-hidden="true">↗</span> Roadmap</a>
+    <a href="{% url 'collection' tenant.id 'risks' %}"><span aria-hidden="true">△</span> Riscos</a>
+    <a href="{% url 'collection' tenant.id 'metrics' %}"><span aria-hidden="true">▥</span> Capacidade</a>
+    <a href="{% url 'collection' tenant.id 'events' %}"><span aria-hidden="true">◷</span> Evolução</a>
+    <a href="{% url 'collection' tenant.id 'links' %}"><span aria-hidden="true">↗</span> Ferramentas</a>
     <div class="nav-divider"></div>
-    <a href="{% url 'collection' tenant.id 'client' %}"><span>▤</span> Dados da empresa</a>
-    <a href="{% url 'collection' tenant.id 'contacts' %}"><span>♧</span> Contatos</a>
-    {% if user.is_consultant %}<a href="{% url 'audit' tenant.id %}"><span>≡</span> Auditoria</a>{% endif %}
-    {% else %}<a href="{% url 'home' %}" aria-current="page"><span>▦</span> Clientes</a>{% endif %}
-    {% if user.is_administrator %}<a href="{% url 'users' %}"><span>♧</span> Usuários</a><a href="/admin/"><span>⚙</span> Catálogos</a>{% endif %}
+    <a href="{% url 'collection' tenant.id 'client' %}"><span aria-hidden="true">▤</span> Dados da empresa</a>
+    <a href="{% url 'collection' tenant.id 'contacts' %}"><span aria-hidden="true">♧</span> Contatos</a>
+    {% if user.is_consultant %}<a href="{% url 'audit' tenant.id %}"><span aria-hidden="true">≡</span> Auditoria</a>{% endif %}
+    {% else %}<a href="{% url 'home' %}" aria-current="page"><span aria-hidden="true">▦</span> Clientes</a>{% endif %}
+    {% if user.is_administrator %}<a href="{% url 'users' %}"><span aria-hidden="true">♧</span> Usuários</a><a href="/admin/"><span aria-hidden="true">⚙</span> Catálogos</a>{% endif %}
   </nav>
   <div class="sidebar-footer"><span class="status-dot"></span> Estratégia que conecta o futuro.<small>Portal de assessoria técnica</small></div>
 </aside>

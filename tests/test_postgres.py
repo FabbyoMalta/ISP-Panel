@@ -129,3 +129,17 @@ def test_concurrent_opposing_dependencies_cannot_create_cycle(domain):
     assert sorted(results) == ["created", "rejected"]
     with tenant_context(domain.a.pk):
         assert RecommendationDependency.objects.count() == 1
+
+
+def test_database_error_restores_context_without_masking_original_error(domain):
+    from apps.tenancy.context import current_tenant
+    from django.db import DataError
+
+    with tenant_context(domain.a.pk):
+        with pytest.raises(DataError, match="division by zero"):
+            with tenant_context(domain.b.pk), connection.cursor() as cursor:
+                cursor.execute("SELECT 1 / 0")
+        assert current_tenant.get() == str(domain.a.pk)
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT current_setting('app.tenant_id')")
+            assert cursor.fetchone()[0] == str(domain.a.pk)

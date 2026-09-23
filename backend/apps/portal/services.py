@@ -25,6 +25,8 @@ def save_record(actor, obj):
     previous = type(obj).objects.filter(pk=obj.pk).first()
     before = model_to_dict(previous) if previous else {}
     obj.save()
+    if obj._meta.label_lower == "clients.client":
+        Tenant.objects.filter(pk=obj.tenant_id).update(name=obj.trade_name)
     after = model_to_dict(obj)
     changes = {
         key: {"before": before.get(key), "after": value}
