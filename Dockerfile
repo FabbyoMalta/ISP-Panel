@@ -13,7 +13,7 @@ COPY requirements.lock .
 RUN pip install --no-cache-dir -r requirements.lock && useradd --uid 10001 --create-home portal
 COPY --chown=portal:portal backend/ ./backend/
 COPY --from=assets --chown=portal:portal /build/backend/static/ ./backend/static/
-RUN DEBUG=true python backend/manage.py collectstatic --noinput
+RUN SECRET_KEY=static-assets-build-only-not-used-at-runtime-0000000000000000 DATABASE_URL=postgresql://build@localhost/build python backend/manage.py collectstatic --noinput
 USER portal
 EXPOSE 8000
 CMD ["sh", "-c", "python backend/manage.py check_runtime_db && gunicorn --chdir backend config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 60 --access-logfile - --access-logformat '%(s)s %(L)s'"]

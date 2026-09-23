@@ -1,0 +1,67 @@
+name: Portal checks
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: isp_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test-only-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TESTING: "true"
+      DATABASE_URL: postgresql://postgres:test-only-password@localhost:5432/isp_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements-dev.lock
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: pip install -r requirements-dev.lock
+      - run: npm ci --prefix frontend --ignore-scripts && npm run build --prefix frontend
+      - run: ruff check backend tests && ruff format --check backend tests
+      - run: python backend/manage.py makemigrations --check --dry-run
+      - run: python backend/manage.py collectstatic --noinput
+      - run: python backend/manage.py spectacular --validate --fail-on-warn --file /tmp/schema.yaml
+      - run: pytest -q
+      - name: Build and verify Compose deployment
+        env:
+          SECRET_KEY: ci-only-strong-secret-0000000000000000000000000000000000000000
+          DB_OWNER_PASSWORD: ci-owner-only
+          DB_APP_PASSWORD: ci-runtime-only
+        run: |
+          docker compose up --build -d --wait
+          docker compose exec -T web python backend/manage.py check_runtime_db
+          curl --fail http://localhost:8080/health/
+          docker compose exec -T -e DEMO_PASSWORD=Fictional-ISP-CI-2026! web python backend/manage.py seed_demo
+      - name: Browser smoke test
+        env:
+          PORTAL_URL: http://localhost:8080
+          DEMO_PASSWORD: Fictional-ISP-CI-2026!
+        run: |
+          playwright install --with-deps chromium
+          python tests/e2e_smoke.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-screenshots
+          path: test-results/
+      - name: Stop Compose
+        if: always()
+        env:
+          SECRET_KEY: ci-only-strong-secret-0000000000000000000000000000000000000000
+          DB_OWNER_PASSWORD: ci-owner-only
+          DB_APP_PASSWORD: ci-runtime-only
+        run: docker compose down -v

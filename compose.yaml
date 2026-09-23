@@ -6,6 +6,7 @@ services:
       POSTGRES_DB: isp_panel
       POSTGRES_USER: isp_owner
       POSTGRES_PASSWORD: ${DB_OWNER_PASSWORD:?Defina DB_OWNER_PASSWORD}
+      POSTGRES_INITDB_ARGS: --encoding=UTF8
       DB_APP_PASSWORD: ${DB_APP_PASSWORD:?Defina DB_APP_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -44,6 +45,8 @@ services:
       EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
       EMAIL_USE_TLS: ${EMAIL_USE_TLS:-true}
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-portal@localhost}
+      HSTS_INCLUDE_SUBDOMAINS: ${HSTS_INCLUDE_SUBDOMAINS:-false}
+      HSTS_PRELOAD: ${HSTS_PRELOAD:-false}
     depends_on:
       migrate:
         condition: service_completed_successfully
