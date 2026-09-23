@@ -4,7 +4,8 @@ Verificado localmente em 23/09/2026:
 
 - Django 5.2.17; Python 3.14.7 no ambiente de desenvolvimento.
 - PostgreSQL 17.11 compilado em /tmp para testes, sem instalação de serviço no host.
-- **52 testes aprovados** com PostgreSQL, incluindo backup/restore via pg_dump/pg_restore.
+- **54 testes aprovados** com PostgreSQL, incluindo backup/restore via pg_dump/pg_restore.
+- Login administrativo sem sessão e perfil correto no bootstrap do superusuário.
 - RLS com papel sem superusuário/BYPASSRLS: leitura sem contexto negada; dados de outro
   tenant inacessíveis por SQL direto; inserção em tenant diferente rejeitada.
 - Integridade composta entre tenants, histórico publicado imutável e auditoria append-only.

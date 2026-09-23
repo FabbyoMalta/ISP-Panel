@@ -154,3 +154,26 @@ def test_removing_dependency_is_audited_even_without_changed_fields(domain, clie
     with tenant_context(domain.a.pk):
         assert not domain.rec_a.dependencies.exists()
         assert AuditEntry.objects.filter(action="dependency_removed").exists()
+
+
+def test_admin_login_works_without_session_and_catalog_is_restricted(domain, client):
+    response = client.get("/admin/login/")
+    assert response.status_code == 200
+    assert "login" in response.content.decode().lower()
+    client.force_login(domain.customer)
+    assert client.get("/admin/assessments/assessmentitemdefinition/").status_code == 302
+    client.force_login(domain.admin)
+    assert client.get("/admin/assessments/assessmentitemdefinition/").status_code == 200
+    response = client.get(
+        f"/admin/assessments/assessmenttemplateversion/{domain.template.pk}/change/"
+    )
+    assert response.status_code == 200
+    assert b'name="_save"' not in response.content
+
+
+def test_bootstrap_superuser_has_administrator_role():
+    user = get_user_model().objects.create_superuser(
+        "bootstrap", email="bootstrap@example.test", password="Strong-bootstrap-pass-72!"
+    )
+    assert user.role == "admin"
+    assert user.is_administrator and user.is_staff

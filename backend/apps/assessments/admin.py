@@ -13,16 +13,16 @@ from .services import publish_catalog
 
 class CatalogAdmin(admin.ModelAdmin):
     def has_module_permission(self, request):
-        return request.user.is_administrator
+        return request.user.is_authenticated and request.user.is_administrator
 
     def has_view_permission(self, request, obj=None):
-        return request.user.is_administrator
+        return request.user.is_authenticated and request.user.is_administrator
 
     def has_add_permission(self, request):
-        return request.user.is_administrator
+        return request.user.is_authenticated and request.user.is_administrator
 
     def has_change_permission(self, request, obj=None):
-        return request.user.is_administrator
+        return request.user.is_authenticated and request.user.is_administrator
 
     def has_delete_permission(self, request, obj=None):
         return False
@@ -59,7 +59,7 @@ class VersionAdmin(CatalogAdmin):
 @admin.register(MaturityRule)
 class RuleAdmin(CatalogAdmin):
     def has_delete_permission(self, request, obj=None):
-        return request.user.is_administrator
+        return request.user.is_authenticated and request.user.is_administrator
 
 
 for model in [AssessmentCategory, MaturityLevel]:
