@@ -102,4 +102,12 @@ def dashboard(user):
         "asn": resources.filter(type__name="ASN").first(),
         "ipv6": resources.filter(type__name="IPv6").first(),
         "upstreams": resources.filter(type__name="Upstream", status="active").count(),
+        # Sincronizados pelo apps.integrations.management.commands.sync_netbackup —
+        # ver docs no próprio comando. "erp" continua cadastro manual do
+        # consultor (Resource), o NetBackup nunca saberia disso.
+        "erp": resources.filter(type__name="ERP").first(),
+        "netbackup_devices": latest.get("netbackup-active-devices"),
+        "netbackup_backup_ok": latest.get("netbackup-backup-ok"),
+        "netbackup_freshness_hours": latest.get("netbackup-backup-freshness-hours"),
+        "netbackup_pop_count": latest.get("netbackup-pop-count"),
     }
