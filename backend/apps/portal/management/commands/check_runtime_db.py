@@ -17,10 +17,19 @@ class Command(BaseCommand):
             )
             if cursor.fetchone()[0]:
                 raise CommandError("Runtime não pode ser proprietário de tabelas.")
+            # `tenancy_tenantmembership` and `integrations_externalobjectmapping`
+            # both carry a `tenant_id` FK column but are deliberately plain
+            # `models.Model` (not `TenantModel`), same reasoning for both:
+            # they're membership/mapping plumbing queried *before* any one
+            # tenant's context is active (login membership resolution; the
+            # NetBackup sync job listing every mapping up front), not a
+            # tenant's own business data — see
+            # apps.integrations.models.ExternalObjectMapping's docstring.
             cursor.execute("""
                 SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
                 JOIN pg_attribute a ON a.attrelid=c.oid AND a.attname='tenant_id'
-                WHERE n.nspname='public' AND c.relkind='r' AND c.relname!='tenancy_tenantmembership'
+                WHERE n.nspname='public' AND c.relkind='r'
+                AND c.relname NOT IN ('tenancy_tenantmembership', 'integrations_externalobjectmapping')
                 AND (NOT c.relrowsecurity OR NOT c.relforcerowsecurity
                      OR NOT EXISTS (SELECT 1 FROM pg_policy p WHERE p.polrelid=c.oid))
             """)

@@ -39,6 +39,7 @@ INSTALLED_APPS = [
             "external_links",
             "audit",
             "portal",
+            "integrations",
         )
     ],
 ]
@@ -138,6 +139,12 @@ EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "true").lower() == "true"
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "portal@localhost")
+# apps.integrations.management.commands.sync_netbackup — read-only summary
+# pull from NetBackup. Empty by default: the command no-ops (logs a warning,
+# writes no IntegrationRun) until both are set, same fail-closed convention
+# as the rest of this file's optional integrations.
+NETBACKUP_API_URL = os.getenv("NETBACKUP_API_URL", "")
+NETBACKUP_API_TOKEN = os.getenv("NETBACKUP_API_TOKEN", "")
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.SessionAuthentication"],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],

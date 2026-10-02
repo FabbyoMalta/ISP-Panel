@@ -136,6 +136,7 @@ class Command(BaseCommand):
             "RADIUS": ["plataforma"],
             "Monitoramento": ["plataforma"],
             "Documentação": ["plataforma"],
+            "ERP": ["sistema", "modulo"],
         }.items():
             ResourceType.objects.get_or_create(name=name, defaults={"attribute_keys": keys})
         for key, name, unit in [
@@ -143,6 +144,16 @@ class Command(BaseCommand):
             ("estimated-subscribers", "Capacidade estimada de clientes", "clientes"),
             ("peak-gbps", "Tráfego de pico", "Gbps"),
             ("capacity-gbps", "Capacidade de trânsito IP", "Gbps"),
+            # Fonte: sincronização automática com o NetBackup — ver
+            # apps.integrations.management.commands.sync_netbackup.
+            ("netbackup-active-devices", "Equipamentos de rede ativos (NetBackup)", "equipamentos"),
+            ("netbackup-backup-ok", "Equipamentos com backup OK (NetBackup)", "equipamentos"),
+            (
+                "netbackup-backup-freshness-hours",
+                "Horas desde o último backup (NetBackup)",
+                "horas",
+            ),
+            ("netbackup-pop-count", "POPs detectados (NetBackup, estimativa)", "POPs"),
         ]:
             MetricDefinition.objects.get_or_create(key=key, defaults={"name": name, "unit": unit})
         if not AssessmentTemplateVersion.objects.exists():
