@@ -1,5 +1,7 @@
 import secrets
 
+import httpx
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
@@ -16,6 +18,8 @@ from apps.assessments.models import Assessment
 from apps.assessments.services import answer_assessment, publish_assessment, start_assessment
 from apps.audit.models import AuditEntry
 from apps.clients.models import Client
+from apps.integrations import services as integrations_services
+from apps.integrations.models import ExternalObjectMapping
 from apps.recommendations.models import Recommendation, RecommendationDependency
 from apps.recommendations.services import add_dependency, remove_dependency, transition
 from apps.tenancy.context import tenant_context
@@ -88,6 +92,104 @@ def client_create(request):
         messages.success(request, "Cliente cadastrado. Comece pelo inventário e pela avaliação.")
         return redirect("dashboard", tenant_id=tenant.pk)
     return render(request, "portal/form.html", {"form": form, "page_title": "Novo cliente"})
+
+
+@login_required
+def netbackup_import(request):
+    """Lists NetBackup tenants and lets a consultant link one to a new
+    ISP-Panel Client in a single click — Tenant + Client +
+    ExternalObjectMapping, then an immediate sync via
+    apps.integrations.services.sync_mapping() so the data is there right
+    away rather than waiting for the next sync_netbackup cron run. Never
+    auto-links anything on its own — see apps.integrations.models'
+    ExternalObjectMapping docstring.
+    """
+    require_consultant(request.user)
+    page_title = "Vincular tenant NetBackup"
+
+    if not settings.NETBACKUP_API_URL or not settings.NETBACKUP_API_TOKEN:
+        return render(
+            request,
+            "portal/netbackup_import.html",
+            {"page_title": page_title, "not_configured": True},
+        )
+
+    if request.method == "POST":
+        slug = request.POST.get("tenant_slug", "").strip()
+        try:
+            payload = integrations_services.fetch_netbackup_summary()
+        except (httpx.HTTPError, ValueError) as exc:
+            messages.error(request, f"Falha ao consultar o NetBackup: {exc}")
+            return redirect("netbackup-import")
+
+        row = next((r for r in payload["tenants"] if r["tenant_slug"] == slug), None)
+        if row is None:
+            messages.error(request, f'Tenant "{slug}" não encontrado no NetBackup.')
+            return redirect("netbackup-import")
+        if ExternalObjectMapping.objects.filter(system="netbackup", external_id=slug).exists():
+            messages.error(request, f'"{slug}" já está vinculado.')
+            return redirect("netbackup-import")
+        if Tenant.objects.filter(slug=slug).exists():
+            messages.error(
+                request,
+                f'Já existe um cliente com o identificador "{slug}" — resolva manualmente '
+                "em Novo cliente antes de vincular.",
+            )
+            return redirect("netbackup-import")
+
+        with transaction.atomic():
+            tenant = Tenant.objects.create(name=row["tenant_name"], slug=slug)
+            with tenant_context(tenant.pk):
+                save_record(
+                    request.user,
+                    Client(
+                        tenant=tenant,
+                        legal_name=row["tenant_name"],
+                        trade_name=row["tenant_name"],
+                        joined_on=timezone.localdate(),
+                    ),
+                )
+            mapping = ExternalObjectMapping.objects.create(
+                system="netbackup", external_id=slug, tenant=tenant
+            )
+
+        actor = integrations_services.ensure_sync_actor()
+        entry = integrations_services.sync_mapping(actor, mapping, payload)
+        if entry["outcome"] == "ok":
+            messages.success(request, f'"{row["tenant_name"]}" vinculado e sincronizado.')
+        else:
+            messages.warning(
+                request,
+                f'"{row["tenant_name"]}" vinculado, mas a sincronização inicial não '
+                f"completou ({entry.get('message') or entry['outcome']}) — a próxima "
+                "sincronização agendada tenta de novo.",
+            )
+        return redirect("dashboard", tenant_id=tenant.pk)
+
+    try:
+        payload = integrations_services.fetch_netbackup_summary()
+    except (httpx.HTTPError, ValueError) as exc:
+        return render(
+            request,
+            "portal/netbackup_import.html",
+            {"page_title": page_title, "fetch_error": str(exc)},
+        )
+
+    linked_slugs = set(
+        ExternalObjectMapping.objects.filter(system="netbackup").values_list(
+            "external_id", flat=True
+        )
+    )
+    tenants = payload.get("tenants", [])
+    return render(
+        request,
+        "portal/netbackup_import.html",
+        {
+            "page_title": page_title,
+            "linked": [t for t in tenants if t["tenant_slug"] in linked_slugs],
+            "unlinked": [t for t in tenants if t["tenant_slug"] not in linked_slugs],
+        },
+    )
 
 
 @login_required

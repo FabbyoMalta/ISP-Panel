@@ -47,6 +47,8 @@ services:
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-portal@localhost}
       HSTS_INCLUDE_SUBDOMAINS: ${HSTS_INCLUDE_SUBDOMAINS:-false}
       HSTS_PRELOAD: ${HSTS_PRELOAD:-false}
+      NETBACKUP_API_URL: ${NETBACKUP_API_URL:-}
+      NETBACKUP_API_TOKEN: ${NETBACKUP_API_TOKEN:-}
     depends_on:
       migrate:
         condition: service_completed_successfully

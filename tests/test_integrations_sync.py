@@ -1,13 +1,14 @@
 """Tests for apps.integrations.management.commands.sync_netbackup — the
 NetBackup pull-sync job. Mocks the outbound HTTP call
-(`_fetch_netbackup_summary`) directly, no real network/DB-external access.
+(`services.fetch_netbackup_summary`) directly, no real network/DB-external
+access.
 """
 
 from datetime import timedelta
 
 import httpx
 import pytest
-from apps.integrations.management.commands import sync_netbackup
+from apps.integrations import services
 from apps.integrations.models import ExternalObjectMapping, IntegrationRun
 from apps.metrics.models import MetricDefinition, MetricObservation
 from apps.tenancy.context import tenant_context
@@ -63,7 +64,7 @@ def test_zero_mappings_creates_a_successful_empty_run():
 def test_happy_path_writes_four_published_observations(domain, monkeypatch):
     _seed_metric_definitions()
     ExternalObjectMapping.objects.create(system="netbackup", external_id="alpha", tenant=domain.a)
-    monkeypatch.setattr(sync_netbackup, "_fetch_netbackup_summary", lambda: {"tenants": [_row()]})
+    monkeypatch.setattr(services, "fetch_netbackup_summary", lambda: {"tenants": [_row()]})
 
     call_command("sync_netbackup")
 
@@ -88,8 +89,8 @@ def test_tenant_with_no_backups_skips_freshness_metric(domain, monkeypatch):
     _seed_metric_definitions()
     ExternalObjectMapping.objects.create(system="netbackup", external_id="alpha", tenant=domain.a)
     monkeypatch.setattr(
-        sync_netbackup,
-        "_fetch_netbackup_summary",
+        services,
+        "fetch_netbackup_summary",
         lambda: {"tenants": [_row(last_backup_at=None)]},
     )
 
@@ -108,8 +109,8 @@ def test_slug_not_found_marks_partial_failure_without_affecting_other_tenants(do
     ExternalObjectMapping.objects.create(system="netbackup", external_id="alpha", tenant=domain.a)
     ExternalObjectMapping.objects.create(system="netbackup", external_id="bravo", tenant=domain.b)
     monkeypatch.setattr(
-        sync_netbackup,
-        "_fetch_netbackup_summary",
+        services,
+        "fetch_netbackup_summary",
         lambda: {"tenants": [_row(tenant_slug="bravo")]},  # "alpha" missing
     )
 
@@ -134,7 +135,7 @@ def test_transport_failure_aborts_whole_run_with_zero_writes(domain, monkeypatch
     def _boom():
         raise httpx.ConnectError("connection refused")
 
-    monkeypatch.setattr(sync_netbackup, "_fetch_netbackup_summary", _boom)
+    monkeypatch.setattr(services, "fetch_netbackup_summary", _boom)
 
     call_command("sync_netbackup")
 
@@ -150,7 +151,7 @@ def test_transport_failure_aborts_whole_run_with_zero_writes(domain, monkeypatch
 def test_rerunning_same_day_skips_already_synced_metrics(domain, monkeypatch):
     _seed_metric_definitions()
     ExternalObjectMapping.objects.create(system="netbackup", external_id="alpha", tenant=domain.a)
-    monkeypatch.setattr(sync_netbackup, "_fetch_netbackup_summary", lambda: {"tenants": [_row()]})
+    monkeypatch.setattr(services, "fetch_netbackup_summary", lambda: {"tenants": [_row()]})
 
     call_command("sync_netbackup")
     call_command("sync_netbackup")
@@ -167,7 +168,7 @@ def test_rerunning_same_day_skips_already_synced_metrics(domain, monkeypatch):
 @pytest.mark.django_db
 def test_a_mid_batch_exception_rolls_back_that_tenants_partial_writes(domain, monkeypatch):
     """`netbackup-pop-count` (the 3rd of 4 candidates) is deliberately left
-    unseeded, so `_write_observations` raises `MetricDefinition.DoesNotExist`
+    unseeded, so `write_observations_for_tenant` raises `MetricDefinition.DoesNotExist`
     after the first two observations (active-devices, backup-ok) would
     already have been created. `MetricDefinition` is a global catalog, not
     tenant-scoped, so this affects every tenant — proving two things at
@@ -181,8 +182,8 @@ def test_a_mid_batch_exception_rolls_back_that_tenants_partial_writes(domain, mo
     ExternalObjectMapping.objects.create(system="netbackup", external_id="alpha", tenant=domain.a)
     ExternalObjectMapping.objects.create(system="netbackup", external_id="bravo", tenant=domain.b)
     monkeypatch.setattr(
-        sync_netbackup,
-        "_fetch_netbackup_summary",
+        services,
+        "fetch_netbackup_summary",
         lambda: {"tenants": [_row(tenant_slug="alpha"), _row(tenant_slug="bravo")]},
     )
 
@@ -201,7 +202,7 @@ def test_a_mid_batch_exception_rolls_back_that_tenants_partial_writes(domain, mo
 def test_pop_count_observation_is_marked_estimated_with_assumptions(domain, monkeypatch):
     _seed_metric_definitions()
     ExternalObjectMapping.objects.create(system="netbackup", external_id="alpha", tenant=domain.a)
-    monkeypatch.setattr(sync_netbackup, "_fetch_netbackup_summary", lambda: {"tenants": [_row()]})
+    monkeypatch.setattr(services, "fetch_netbackup_summary", lambda: {"tenants": [_row()]})
 
     call_command("sync_netbackup")
 
@@ -218,8 +219,8 @@ def test_freshness_hours_computed_from_raw_timestamp(domain, monkeypatch):
     ExternalObjectMapping.objects.create(system="netbackup", external_id="alpha", tenant=domain.a)
     last_backup_at = timezone.now() - timedelta(hours=5)
     monkeypatch.setattr(
-        sync_netbackup,
-        "_fetch_netbackup_summary",
+        services,
+        "fetch_netbackup_summary",
         lambda: {"tenants": [_row(last_backup_at=last_backup_at.isoformat())]},
     )
 
@@ -230,3 +231,39 @@ def test_freshness_hours_computed_from_raw_timestamp(domain, monkeypatch):
             definition__key="netbackup-backup-freshness-hours"
         )
         assert 4.9 <= float(freshness.value) <= 5.1
+
+
+@pytest.mark.django_db
+def test_sync_mapping_in_isolation_against_an_already_fetched_payload(domain):
+    """services.sync_mapping() is what apps.portal.views.netbackup_import
+    calls right after creating a mapping — exercises it directly, with a
+    payload the caller already fetched, not via the management command.
+    """
+    _seed_metric_definitions()
+    mapping = ExternalObjectMapping.objects.create(
+        system="netbackup", external_id="alpha", tenant=domain.a
+    )
+    actor = services.ensure_sync_actor()
+    payload = {"tenants": [_row()]}
+
+    entry = services.sync_mapping(actor, mapping, payload)
+
+    assert entry["outcome"] == "ok"
+    with tenant_context(domain.a.id):
+        assert MetricObservation.objects.filter(definition__key__in=METRIC_KEYS).count() == 4
+
+
+@pytest.mark.django_db
+def test_sync_mapping_reports_not_found_without_touching_other_tenants(domain):
+    _seed_metric_definitions()
+    mapping = ExternalObjectMapping.objects.create(
+        system="netbackup", external_id="alpha", tenant=domain.a
+    )
+    actor = services.ensure_sync_actor()
+    payload = {"tenants": [_row(tenant_slug="someone-else")]}
+
+    entry = services.sync_mapping(actor, mapping, payload)
+
+    assert entry["outcome"] == "not_found_in_netbackup"
+    with tenant_context(domain.a.id):
+        assert MetricObservation.objects.filter(definition__key__in=METRIC_KEYS).count() == 0

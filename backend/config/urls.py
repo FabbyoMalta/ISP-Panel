@@ -24,6 +24,7 @@ urlpatterns = [
     path("", views.home, name="home"),
     path("health/", views.health, name="health"),
     path("clients/new/", views.client_create, name="client-create"),
+    path("clients/import-netbackup/", views.netbackup_import, name="netbackup-import"),
     path("users/", views.users, name="users"),
     path("users/new/", views.user_edit, name="user-create"),
     path("users/<int:object_id>/", views.user_edit, name="user-edit"),

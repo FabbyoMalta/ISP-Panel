@@ -1,0 +1,60 @@
+{% extends 'base.html' %}{% block content %}
+<div class="page-heading"><div><p class="eyebrow">GESTÃO DO PORTAL</p><h1>{{ page_title }}</h1><p>Vincula um tenant já existente no NetBackup a um cliente novo aqui — cria o cliente e sincroniza os dados na mesma ação.</p></div><a class="button" href="{% url 'home' %}">Voltar à carteira</a></div>
+
+{% if not_configured %}
+<div class="panel padded">
+  <p>NetBackup não está configurado neste ambiente (<code>NETBACKUP_API_URL</code>/<code>NETBACKUP_API_TOKEN</code>).</p>
+</div>
+{% elif fetch_error %}
+<div class="panel padded">
+  <p>Falha ao consultar o NetBackup: {{ fetch_error }}</p>
+</div>
+{% else %}
+
+<section class="panel padded">
+  <h2>Não vinculados</h2>
+  {% if unlinked %}
+  <table class="w-full" style="width:100%">
+    <thead><tr><th style="text-align:left">Tenant no NetBackup</th><th style="text-align:left">Equipamentos</th><th></th></tr></thead>
+    <tbody>
+    {% for tenant in unlinked %}
+    <tr class="dependency-row">
+      <td>{{ tenant.tenant_name }} <small>({{ tenant.tenant_slug }})</small></td>
+      <td>{{ tenant.device_count_active }} ativo(s), {{ tenant.backup_ok_count }} com backup OK</td>
+      <td style="text-align:right">
+        <form method="post" style="display:inline">
+          {% csrf_token %}
+          <input type="hidden" name="tenant_slug" value="{{ tenant.tenant_slug }}">
+          <button class="button primary" type="submit">Vincular</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>Nenhum tenant novo no NetBackup — todos já estão vinculados.</p>
+  {% endif %}
+</section>
+
+<section class="panel padded" style="margin-top:20px">
+  <h2>Já vinculados</h2>
+  {% if linked %}
+  <table class="w-full" style="width:100%">
+    <thead><tr><th style="text-align:left">Tenant no NetBackup</th><th style="text-align:left">Equipamentos</th></tr></thead>
+    <tbody>
+    {% for tenant in linked %}
+    <tr class="dependency-row">
+      <td>{{ tenant.tenant_name }} <small>({{ tenant.tenant_slug }})</small></td>
+      <td>{{ tenant.device_count_active }} ativo(s), {{ tenant.backup_ok_count }} com backup OK</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>Nenhum vínculo ainda.</p>
+  {% endif %}
+</section>
+
+{% endif %}
+{% endblock %}
