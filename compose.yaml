@@ -49,6 +49,12 @@ services:
       HSTS_PRELOAD: ${HSTS_PRELOAD:-false}
       NETBACKUP_API_URL: ${NETBACKUP_API_URL:-}
       NETBACKUP_API_TOKEN: ${NETBACKUP_API_TOKEN:-}
+    # Lets NETBACKUP_API_URL=http://host.docker.internal:<port> reach a
+    # NetBackup stack running as a separate compose project on the same
+    # host (its own Docker network) — no shared network needed. In
+    # production the URL is NetBackup's public HTTPS domain instead.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       migrate:
         condition: service_completed_successfully
