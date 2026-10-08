@@ -125,7 +125,7 @@ class Command(BaseCommand):
                 for title in requirements:
                     MaturityRule.objects.create(level=level, item=definitions[title])
         for name, keys in {
-            "Upstream": ["operadora", "circuito"],
+            "Upstream": ["operadora", "circuito", "asn"],
             "ASN": ["numero"],
             "IPv4": ["prefixo"],
             "IPv6": ["prefixo"],

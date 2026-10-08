@@ -21,6 +21,7 @@
     <a href="{% url 'dashboard' tenant.id %}" {% if request.resolver_match.url_name == 'dashboard' %}aria-current="page"{% endif %}><span aria-hidden="true">◫</span> Visão geral</a>
     <a href="{% url 'collection' tenant.id 'resources' %}"><span aria-hidden="true">▦</span> Infraestrutura</a>
     <a href="{% url 'assessments' tenant.id %}"><span aria-hidden="true">◎</span> Avaliação técnica</a>
+    {% if user.is_consultant %}<a href="{% url 'ai-assistant' tenant.id %}"><span aria-hidden="true">✦</span> Assistente IA</a>{% endif %}
     <a href="{% url 'roadmap' tenant.id %}"><span aria-hidden="true">↗</span> Roadmap</a>
     <a href="{% url 'collection' tenant.id 'risks' %}"><span aria-hidden="true">△</span> Riscos</a>
     <a href="{% url 'collection' tenant.id 'metrics' %}"><span aria-hidden="true">▥</span> Capacidade</a>

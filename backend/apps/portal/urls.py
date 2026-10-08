@@ -10,6 +10,7 @@ urlpatterns = [
         views.recommendation_detail,
         name="recommendation-detail",
     ),
+    path("assistente/", views.ai_assistant, name="ai-assistant"),
     path("assessments/", views.assessments, name="assessments"),
     path("assessments/new/", views.assessment_create, name="assessment-create"),
     path("assessments/<uuid:object_id>/", views.assessment_detail, name="assessment-detail"),
@@ -18,4 +19,9 @@ urlpatterns = [
     path("data/<slug:section>/", views.collection, name="collection"),
     path("data/<slug:section>/new/", views.edit_record, name="record-create"),
     path("data/<slug:section>/<uuid:object_id>/edit/", views.edit_record, name="record-edit"),
+    path(
+        "data/resources/<uuid:object_id>/whois/",
+        views.resource_asn_lookup,
+        name="resource-whois",
+    ),
 ]

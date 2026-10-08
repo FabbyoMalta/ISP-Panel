@@ -40,6 +40,7 @@ INSTALLED_APPS = [
             "audit",
             "portal",
             "integrations",
+            "ai_assist",
         )
     ],
 ]
@@ -145,6 +146,12 @@ DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "portal@localhost")
 # as the rest of this file's optional integrations.
 NETBACKUP_API_URL = os.getenv("NETBACKUP_API_URL", "")
 NETBACKUP_API_TOKEN = os.getenv("NETBACKUP_API_TOKEN", "")
+# apps.ai_assist.services — OpenRouter chat-completions call for the
+# consultant-facing AI assistant. Empty by default: the assistant view
+# shows "não configurado" and never calls out until both are set, same
+# fail-closed convention as NETBACKUP_API_URL/TOKEN above.
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "")
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.SessionAuthentication"],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],

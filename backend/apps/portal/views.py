@@ -14,12 +14,16 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.accounts.models import SecurityEvent
+from apps.ai_assist import services as ai_assist_services
+from apps.ai_assist.models import AIConversation
 from apps.assessments.models import Assessment
 from apps.assessments.services import answer_assessment, publish_assessment, start_assessment
 from apps.audit.models import AuditEntry
 from apps.clients.models import Client
 from apps.integrations import services as integrations_services
 from apps.integrations.models import ExternalObjectMapping
+from apps.inventory import services as inventory_services
+from apps.inventory.models import Resource
 from apps.recommendations.models import Recommendation, RecommendationDependency
 from apps.recommendations.services import add_dependency, remove_dependency, transition
 from apps.tenancy.context import tenant_context
@@ -287,6 +291,34 @@ def edit_record(request, tenant_id, section, object_id=None):
 
 
 @login_required
+def resource_asn_lookup(request, tenant_id, object_id):
+    require_consultant(request.user)
+    resource = get_object_or_404(visible(Resource.objects.all(), request.user), pk=object_id)
+    attributes = resource.attributes or {}
+    asn_number = attributes.get("numero") or attributes.get("asn")
+    result, error = None, None
+    if not asn_number:
+        error = 'Esse recurso não tem um número de ASN cadastrado (atributo "numero" ou "asn").'
+    else:
+        try:
+            result = inventory_services.lookup_asn(asn_number)
+        except ValueError as exc:
+            error = str(exc)
+        except httpx.HTTPError:
+            error = "Não foi possível consultar o RDAP agora. Tente de novo."
+    return render(
+        request,
+        "portal/resource_asn_lookup.html",
+        {
+            "resource": resource,
+            "result": result,
+            "error": error,
+            "page_title": f"Consulta RDAP · {resource.name}",
+        },
+    )
+
+
+@login_required
 def roadmap(request, tenant_id):
     return render(
         request,
@@ -420,6 +452,45 @@ def assessment_detail(request, tenant_id, object_id):
             "rows": rows,
             "edit_form": AssessmentEditForm(instance=obj),
             "page_title": obj.title,
+        },
+    )
+
+
+@login_required
+def ai_assistant(request, tenant_id):
+    require_consultant(request.user)
+    configured = bool(settings.OPENROUTER_API_KEY and settings.OPENROUTER_MODEL)
+    conversation = AIConversation.objects.order_by("-started_at").first()
+    created = not conversation
+    if created:
+        conversation = AIConversation.objects.create(
+            tenant=request.tenant, title=f"Levantamento — {request.tenant.name}"
+        )
+    if request.method == "POST":
+        if not configured:
+            messages.error(request, "Assistente IA não configurado (OPENROUTER_API_KEY/MODEL).")
+            return redirect("ai-assistant", tenant_id=tenant_id)
+        text = request.POST.get("message", "")
+        try:
+            ai_assist_services.send_message(request.user, conversation, text)
+        except ValidationError as error:
+            messages.error(request, " ".join(error.messages))
+        except httpx.HTTPError:
+            messages.error(request, "Não foi possível falar com a IA agora. Tente de novo.")
+        return redirect("ai-assistant", tenant_id=tenant_id)
+    if created and configured:
+        try:
+            ai_assist_services.send_message(request.user, conversation, "")
+        except httpx.HTTPError:
+            messages.error(request, "Não foi possível falar com a IA agora. Tente de novo.")
+    return render(
+        request,
+        "portal/ai_assistant.html",
+        {
+            "conversation": conversation,
+            "messages_list": conversation.messages.all(),
+            "configured": configured,
+            "page_title": "Assistente IA",
         },
     )
 
