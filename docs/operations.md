@@ -8,7 +8,8 @@ o servidor, portas 80/443 disponíveis e serviço SMTP configurado. Defina no `.
 - SECRET_KEY e senhas independentes, aleatórias e fortes; arquivo com permissão 0600.
 - DOMAIN e ALLOWED_HOSTS com o domínio real; CSRF_TRUSTED_ORIGINS=https://seu.dominio.
 - EMAIL_HOST, EMAIL_PORT, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD e DEFAULT_FROM_EMAIL.
-- EMAIL_USE_TLS=true para SMTP com STARTTLS. Não utilize backend de console em produção.
+- EMAIL_USE_TLS=true para SMTP com STARTTLS (porta 587), ou EMAIL_PORT=465 e
+  EMAIL_USE_SSL=true para TLS implícito. Não utilize backend de console em produção.
 
 ```sh
 chmod 600 .env

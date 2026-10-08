@@ -139,6 +139,12 @@ EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "true").lower() == "true"
+# Implicit TLS (port 465, e.g. Titan/GoDaddy) instead of STARTTLS (587).
+# Django refuses both at once, so enabling SSL turns STARTTLS off.
+EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "false").lower() == "true"
+if EMAIL_USE_SSL:
+    EMAIL_USE_TLS = False
+EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "15"))
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "portal@localhost")
 # apps.integrations.management.commands.sync_netbackup — read-only summary
 # pull from NetBackup. Empty by default: the command no-ops (logs a warning,
