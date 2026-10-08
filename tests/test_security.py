@@ -175,3 +175,4 @@ def test_authentication_required(domain, client):
     assert client.get("/").status_code == 302
     assert client.get(f"/api/v1/t/{domain.a.id}/resources/").status_code == 403
     assert client.get("/api/v1/tenants/").status_code == 403
+    assert client.get("/api/schema/").status_code == 403

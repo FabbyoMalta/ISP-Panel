@@ -171,6 +171,8 @@ SPECTACULAR_SETTINGS = {
     "TITLE": "ISP Panel API",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    # The schema maps every API route — not for anonymous visitors.
+    "SERVE_PERMISSIONS": ["rest_framework.permissions.IsAuthenticated"],
     "ENUM_NAME_OVERRIDES": {
         "RecommendationStatusEnum": "apps.recommendations.models.Recommendation.Status",
         "ResourceStatusEnum": "apps.inventory.models.Resource.Status",
