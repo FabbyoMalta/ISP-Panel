@@ -1,0 +1,11 @@
+# Production behind a host reverse proxy that already owns 80/443 (nginx on
+# a shared VPS). Use on top of the production file:
+#   docker compose -f compose.yaml -f compose.production.yaml -f compose.behind-proxy.yaml up -d --wait
+# The host proxy terminates TLS and forwards to 127.0.0.1:${PROXY_PORT}; see
+# docs/operations.md. Requires Docker Compose >= 2.24.4 for !override.
+services:
+  proxy:
+    environment:
+      CADDY_SITE: ":80"
+    ports: !override
+      - "127.0.0.1:${PROXY_PORT:-8080}:80"

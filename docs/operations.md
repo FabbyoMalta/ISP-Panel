@@ -35,6 +35,21 @@ uso de um volume vazio: mudar a senha em `.env` não altera usuários de um volu
 existente. Para rotação, altere a senha no PostgreSQL e atualize o ambiente em uma
 janela controlada. A aplicação recusa iniciar com papel privilegiado.
 
+### Atrás de um nginx já existente
+
+Se o servidor já tem um proxy reverso em 80/443 (ex.: nginx servindo outros
+sistemas), o Caddy do projeto escuta só em `127.0.0.1:${PROXY_PORT:-8080}` e o
+nginx termina o TLS e encaminha para ele:
+
+```sh
+docker compose -f compose.yaml -f compose.production.yaml -f compose.behind-proxy.yaml up -d --wait
+```
+
+No nginx, `proxy_pass http://127.0.0.1:8080;` com `Host`, `X-Forwarded-For` e
+`X-Forwarded-Proto $scheme`. O Caddy só confia nesses cabeçalhos vindos de
+endereços privados (`trusted_proxies private_ranges` no `deploy/Caddyfile`),
+então o Django enxerga HTTPS e o IP real do cliente.
+
 ## Cadastro e publicação
 
 Clientes visualizam apenas registros publicados. Rascunhos de avaliações não são

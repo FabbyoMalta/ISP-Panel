@@ -1,9 +1,19 @@
+{
+    # Trust X-Forwarded-* only from private addresses: a host reverse proxy
+    # (nginx on a shared VPS, see compose.behind-proxy.yaml) reaches us via
+    # the Docker gateway. When Caddy faces the Internet directly, clients
+    # are public addresses and their headers stay untrusted.
+    servers {
+        trusted_proxies static private_ranges
+    }
+}
+
 {$CADDY_SITE} {
     encode zstd gzip
     request_body {
         max_size 2MB
     }
     reverse_proxy web:8000 {
-        header_up X-Real-IP {remote_host}
+        header_up X-Real-IP {client_ip}
     }
 }
